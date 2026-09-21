@@ -45,6 +45,7 @@ venv.bak/
 *.pth
 *.tar.gz
 *.zip
+*.qp
 
 # Pytest / coverage
 .pytest_cache/

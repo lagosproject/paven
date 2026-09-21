@@ -5,7 +5,7 @@
 [![Paper](https://img.shields.io/badge/Paper-Elsevier%20EAAI%202025-blue.svg)](https://doi.org/10.1016/j.engappai.2025.111664)
 [![TFM Thesis](https://img.shields.io/badge/UPM%20Thesis-Open%20Access-green.svg)](https://oa.upm.es/88254/)
 [![Model on HF](https://img.shields.io/badge/Model-Hugging%20Face-yellow.svg)](https://huggingface.co/lagosproject/paven)
-[![CI Tests](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![CI](https://github.com/lagosproject/paven/actions/workflows/tests.yml/badge.svg)](https://github.com/lagosproject/paven/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
