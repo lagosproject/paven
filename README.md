@@ -17,6 +17,11 @@ Official open-source implementation and evaluation framework for **PAVEN** (*A P
 
 PAVEN leverages deep spatio-temporal visual attention networks to model human foveal fixation and transitional saccadic eye movements over video sequences. By mapping continuous visual saliency distributions into discrete Coding Tree Unit (CTU, $128 \times 128$) quantization deltas, PAVEN achieves between **3% and 16% bitrate reduction** in Versatile Video Coding (VVC/H.266) without any perceived loss in subjective visual quality.
 
+<div align="center">
+  <img src="docs/assets/demo_paven_preview.gif" alt="PAVEN Saliency and Delta-QP Grid Visualization" width="100%" />
+  <p><em>Real-time demonstration of PAVEN on BasketballDrill (JVET CTC): (Top) Original frame, Ground-truth gaze weighted, PAVEN saliency weighted. (Middle) Saliency clusters, Ground-truth eye fixations, Predicted neural saliency heatmap. (Bottom) Continuous-to-discrete CTU quantization grid with Delta-QP contours.</em></p>
+</div>
+
 ---
 
 ## 🌟 Key Features
