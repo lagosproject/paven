@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paven"
+version = "0.1.0"
+description = "PAVEN: A Perceptual Algorithm for Versatile video Encoding using Neural networks"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    { name = "Pablo Fernández Lagos", email = "pablo.fernandez.lagos@alumnos.upm.es" },
+    { name = "Antonio Jesús Díaz Honrubia", email = "antoniojesus.diaz@upm.es" }
+]
+keywords = [
+    "video-compression",
+    "vvc",
+    "versatile-video-coding",
+    "saliency-detection",
+    "perceptual-video-coding",
+    "deep-learning",
+    "pytorch"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Video",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
+dependencies = [
+    "torch>=1.12.0",
+    "torchvision>=0.13.0",
+    "numpy>=1.20.0",
+    "opencv-python-headless>=4.5.0",
+    "scipy>=1.7.0",
+    "shapely>=1.8.0",
+    "tqdm>=4.60.0",
+    "huggingface_hub>=0.14.0",
+    "pandas>=1.3.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "flake8>=4.0.0"
+]
+
+[project.scripts]
+paven-generate = "paven.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/lagosproject/paven"
+"Paper (Elsevier EAAI)" = "https://doi.org/10.1016/j.engappai.2025.111664"
+"Master Thesis (UPM)" = "https://oa.upm.es/88254/"
+"Model Weights (Hugging Face)" = "https://huggingface.co/lagosproject/paven"
+Repository = "https://github.com/lagosproject/paven.git"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["paven*"]
+

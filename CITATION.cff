@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If you use this software, pre-trained model weights, or methodology, please cite both the journal paper and the master thesis as specified below."
+title: "PAVEN: A Perceptual Algorithm for Versatile video Encoding using Neural networks"
+authors:
+  - family-names: "Díaz-Honrubia"
+    given-names: "Antonio Jesús"
+    orcid: "https://orcid.org/0000-0002-3908-7264"
+    affiliation: "Universidad Politécnica de Madrid"
+  - family-names: "Fernández-Lagos"
+    given-names: "Pablo"
+    affiliation: "Universidad Politécnica de Madrid"
+  - family-names: "Valle"
+    given-names: "Roberto"
+    affiliation: "Universidad Politécnica de Madrid"
+  - family-names: "Bescós"
+    given-names: "Jesús"
+    affiliation: "Universidad Autónoma de Madrid"
+version: 0.1.0
+doi: 10.1016/j.engappai.2025.111664
+date-released: 2025-01-15
+url: "https://github.com/lagosproject/paven"
+repository-code: "https://github.com/lagosproject/paven"
+license: MIT
+keywords:
+  - "video compression"
+  - "versatile video coding"
+  - "VVC"
+  - "deep learning"
+  - "visual saliency"
+  - "perceptual video coding"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Díaz-Honrubia"
+      given-names: "Antonio Jesús"
+    - family-names: "Fernández-Lagos"
+      given-names: "Pablo"
+    - family-names: "Valle"
+      given-names: "Roberto"
+    - family-names: "Bescós"
+      given-names: "Jesús"
+  title: "PAVEN: A Perceptual Algorithm for Versatile video Encoding using Neural networks"
+  journal: "Engineering Applications of Artificial Intelligence"
+  volume: 159
+  pages: 111664
+  year: 2025
+  issn: "0952-1976"
+  doi: "10.1016/j.engappai.2025.111664"
