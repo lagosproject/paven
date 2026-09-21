@@ -1,0 +1,574 @@
+diff --git a/.gitignore b/.gitignore
+index 8de22b3bb..a9d81316a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,6 +2,7 @@ dec.yuv
+ rec.yuv
+ str.bin
+ /build/
++/buildDebug/
+ /bin/
+ /lib/
+ core
+diff --git a/source/App/EncoderApp/EncApp.cpp b/source/App/EncoderApp/EncApp.cpp
+index 00cff17a2..e22fd5869 100644
+--- a/source/App/EncoderApp/EncApp.cpp
++++ b/source/App/EncoderApp/EncApp.cpp
+@@ -75,6 +75,119 @@ EncApp::~EncApp()
+ 
+ void EncApp::xInitLibCfg()
+ {
++  // Pablo
++  bool debug_pablo = false;
++  if (debug_pablo){
++    std::cout << "Getting matrix values" << std::endl;
++    std::cout << "File Path: " + m_qpFilePath << std::endl;
++  }
++    
++  double cu_height = m_sourceHeight / static_cast<double>(128);
++  double cu_width  = m_sourceWidth / static_cast<double>(128);
++  widthCUCount     = (int) ceil(cu_width);
++  int tam_frame    = (int) (ceil(cu_height) * widthCUCount);
++
++  if (debug_pablo)
++  {
++    std::cout << "Tamano del frame: " + std::to_string(tam_frame) << std::endl;
++    std::cout << "Frames a codificar: " + std::to_string(m_framesToBeEncoded) << std::endl;
++  }
++    
++  if (m_qpFilePath.empty())
++  {
++    widthCUCount = -1;
++  } else
++  {
++    std::ifstream            QPReadFile(m_qpFilePath);
++    std::vector<std::string> result;
++
++    m_qp_matrix_values = (int**) malloc(m_framesToBeEncoded * sizeof(int*));
++    for (int i = 0; i < m_framesToBeEncoded; i++)
++    {
++      // std::cout << "Creando matriz: " + std::to_string(i) << std::endl;
++      m_qp_matrix_values[i] = (int*) malloc(tam_frame * sizeof(int));
++    }
++    if (debug_pablo)
++      std::cout << "Matriz creada " << std::endl;
++    if (QPReadFile.is_open())
++    {
++      std::string substr;
++      while (getline(QPReadFile, substr, ','))
++      {
++        result.push_back(substr);
++      }
++      QPReadFile.close();
++    }
++    else
++    {
++      std::cerr << "The file " + m_qpFilePath + " does not exist " << std::endl;
++      throw;
++    }
++
++    if (debug_pablo)
++      std::cout << "Archivo leido " << std::endl;
++
++    for (int i = 0; i < m_framesToBeEncoded; i++)
++    {
++      for (int z = 0; z < tam_frame; z++)
++      {
++        int index = i * tam_frame + z;
++        if (debug_pablo)
++          std::cout << "Introducing at frame " << i << ", CU " << z << " -> Value at index: " << index << std::endl;
++
++        std::string val = result[index];
++        val.erase(std::remove(val.begin(), val.end(), '\n'), val.cend());
++        try
++        {
++          int qp_matrix_value = m_iQP + stoi(val);
++          if (qp_matrix_value > 63){
++            std::cerr << "Error: QP value is out of range, is greater than 63" << std::endl;
++            throw;
++          }
++          m_qp_matrix_values[i][z] = qp_matrix_value;
++        }
++        catch (const std::invalid_argument& e)
++        {
++          std::cerr << "Error: " << e.what() << std::endl;
++          std::cerr << "Argument at frame [" << i << "] and CU [" << z << "] is <" << val << ">" << std::endl;
++          throw;
++        }
++
++        if (debug_pablo)
++          std::cout << "Valor <" + std::to_string(m_qp_matrix_values[i][z]) + "> - <" + val + ">" << std::endl;
++      }
++    }
++    if (debug_pablo)
++      std::cout << "Matrix generated succesfully" << std::endl;
++  }
++
++  // Obtenemos los datos del archivo de configuracion en caso de existir
++  if (!m_sliceFilePath.empty())
++  {
++    std::ifstream SlicesReadFile(m_sliceFilePath);
++    // Abrimos el archivo, leemos y guardamos los valores
++    if (SlicesReadFile.is_open())
++    {
++      std::string substr;
++      while (getline(SlicesReadFile, substr))
++      {
++        break;
++      }
++      SlicesReadFile.close();
++      m_slices_values = substr;
++    }
++    else
++    {   // En caso de que la ruta este mal especificada o no exista salimos con error
++      std::cout << "El archivo " + m_sliceFilePath + " no existe " << std::endl;
++      return;
++    }
++  }
++  else
++  {   // En caso de que no exista ninguna configuracion lo indicamos aplicando un string vacio
++    m_slices_values = "";
++  }
++  // END: Pablo
++
+   VPS& vps = *m_cEncLib.getVPS();
+   if (m_targetOlsIdx != 500)
+   {
+@@ -238,6 +351,11 @@ void EncApp::xInitLibCfg()
+   vps.setProfileTierLevel(ptls);
+   vps.setVPSExtensionFlag                                        ( false );
+   m_cEncLib.setProfile                                           ( m_profile);
++    // Pablo
++  m_cEncLib.setQPMatrixValues(m_qp_matrix_values);
++  m_cEncLib.setWidthCUCount(widthCUCount);
++  m_cEncLib.setSlicesValues(m_slices_values);
++  // END: Pablo
+   m_cEncLib.setLevel                                             ( m_levelTier, m_level);
+   m_cEncLib.setFrameOnlyConstraintFlag                           ( m_frameOnlyConstraintFlag);
+   m_cEncLib.setMultiLayerEnabledFlag                             ( m_multiLayerEnabledFlag || m_maxLayers > 1);
+diff --git a/source/App/EncoderApp/EncAppCfg.cpp b/source/App/EncoderApp/EncAppCfg.cpp
+index 08dcffe8c..30fd485fd 100644
+--- a/source/App/EncoderApp/EncAppCfg.cpp
++++ b/source/App/EncoderApp/EncAppCfg.cpp
+@@ -766,6 +766,10 @@ bool EncAppCfg::parseCfg( int argc, char* argv[] )
+   ("InputPathPrefix,-ipp",                            inputPathPrefix,                             string(""), "pathname to prepend to input filename")
+   ("BitstreamFile,b",                                 m_bitstreamFileName,                         string(""), "Bitstream output file name")
+   ("ReconFile,o",                                     m_reconFileName,                             string(""), "Reconstructed YUV output file name")
++  // Pablo
++  ("QPFilePath",                                      m_qpFilePath,                                std::string(""), "Ruta del archivo donde se encuentran los datos de los QP")
++  ("SliceFilePath",                                   m_sliceFilePath,                             std::string(""), "Ruta del archivo donde se encuentran los datos de los slices")
++  // END: Pablo
+ #if JVET_Z0120_SII_SEI_PROCESSING
+   ("SEIShutterIntervalPreFilename,-sii",              m_shutterIntervalPreFileName, string(""), "File name of Pre-Filtering video. If empty, not output video\n")
+ #endif  
+@@ -4755,6 +4759,10 @@ void EncAppCfg::xPrintParameter()
+   msg( DETAILS, "Input          File                    : %s\n", m_inputFileName.c_str() );
+   msg( DETAILS, "Bitstream      File                    : %s\n", m_bitstreamFileName.c_str() );
+   msg( DETAILS, "Reconstruction File                    : %s\n", m_reconFileName.c_str() );
++  // Pablo
++  msg(DETAILS, "QPFilePath      File                    : %s\n", m_qpFilePath.c_str());
++  msg(DETAILS, "SliceFilePath   File                    : %s\n", m_sliceFilePath.c_str());
++  // END: Pablo
+ #if JVET_Z0120_SII_SEI_PROCESSING
+   if (m_ShutterFilterEnable && !m_shutterIntervalPreFileName.empty())
+   {
+diff --git a/source/App/EncoderApp/EncAppCfg.h b/source/App/EncoderApp/EncAppCfg.h
+index 3732ffdbb..2f3698bc3 100644
+--- a/source/App/EncoderApp/EncAppCfg.h
++++ b/source/App/EncoderApp/EncAppCfg.h
+@@ -84,6 +84,17 @@ protected:
+   std::string m_bitstreamFileName;                            ///< output bitstream file
+   std::string m_reconFileName;                                ///< output reconstruction file
+ 
++  // Pablo
++  // QP parameters
++  std::string m_qpFilePath;
++  int**       m_qp_matrix_values;
++  int         widthCUCount;
++
++  // Slice parameters
++  std::string m_sliceFilePath;
++  std::string m_slices_values;
++  // END: Pablo
++
+   // Lambda modifiers
+   double    m_adLambdaModifier[ MAX_TLAYER ];                 ///< Lambda modifier array for each temporal layer
+   std::vector<double> m_adIntraLambdaModifier;                ///< Lambda modifier for Intra pictures, one for each temporal layer. If size>temporalLayer, then use [temporalLayer], else if size>0, use [size()-1], else use m_adLambdaModifier.
+diff --git a/source/Lib/CommonLib/TypeDef.h b/source/Lib/CommonLib/TypeDef.h
+index 7c5d31039..db5f0ea44 100644
+--- a/source/Lib/CommonLib/TypeDef.h
++++ b/source/Lib/CommonLib/TypeDef.h
+@@ -114,7 +114,7 @@ typedef std::pair<int, int>  TrCost;
+ // ====================================================================================================================
+ 
+ #ifndef ENABLE_TRACING
+-#define ENABLE_TRACING                                    0 // DISABLE by default (enable only when debugging, requires 15% run-time in decoding) -- see documentation in 'doc/DTrace for NextSoftware.pdf'
++#define ENABLE_TRACING                                    1 // DISABLE by default (enable only when debugging, requires 15% run-time in decoding) -- see documentation in 'doc/DTrace for NextSoftware.pdf'
+ #endif
+ 
+ #if ENABLE_TRACING
+diff --git a/source/Lib/EncoderLib/EncCfg.h b/source/Lib/EncoderLib/EncCfg.h
+index de44bce0b..93e83227e 100644
+--- a/source/Lib/EncoderLib/EncCfg.h
++++ b/source/Lib/EncoderLib/EncCfg.h
+@@ -243,6 +243,14 @@ protected:
+   bool      m_noPersistentRiceAdaptationConstraintFlag;
+   bool      m_noReverseLastSigCoeffConstraintFlag;
+ 
++  // Pablo
++  // QP Params
++  int**       m_qp_matrix_values;
++  int         m_widthCUCount;
++  // Slice params
++  std::string m_slices_values;
++  // END: Pablo
++
+   /* profile & level */
+   Profile::Name m_profile;
+   Level::Tier   m_levelTier;
+@@ -969,6 +977,17 @@ public:
+   std::map<uint32_t, SEIAnnotatedRegions::AnnotatedRegionObject> m_arObjects;
+   void setProfile(Profile::Name profile) { m_profile = profile; }
+   void setLevel(Level::Tier tier, Level::Name level) { m_levelTier = tier; m_level = level; }
++
++  // Pablo
++  void  setQPMatrixValues(int** qp_matrix_values) { m_qp_matrix_values = qp_matrix_values; }
++  int** getQPMatrixValues() { return m_qp_matrix_values; }
++  void  setWidthCUCount(int widthCuCount) { m_widthCUCount = widthCuCount; }
++  int   getWidthCUCount() { return m_widthCUCount; }
++
++  void        setSlicesValues(std::string slices_values) { m_slices_values = slices_values; }
++  std::string getSlicesValues() { return m_slices_values; }
++  // END: Pablo
++
+   bool      getFrameOnlyConstraintFlag() const { return m_frameOnlyConstraintFlag; }
+   void      setFrameOnlyConstraintFlag(bool b) { m_frameOnlyConstraintFlag = b;    }
+   bool      getMultiLayerEnabledFlag() const   { return m_multiLayerEnabledFlag;   }
+diff --git a/source/Lib/EncoderLib/EncCu.cpp b/source/Lib/EncoderLib/EncCu.cpp
+index c41ff695e..dd8fc5c5a 100644
+--- a/source/Lib/EncoderLib/EncCu.cpp
++++ b/source/Lib/EncoderLib/EncCu.cpp
+@@ -508,6 +508,22 @@ bool EncCu::xCheckBestMode( CodingStructure *&tempCS, CodingStructure *&bestCS,
+ 
+ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Partitioner& partitioner, double maxCostAllowed )
+ {
++
++    // Pablo
++  // - Parametros para facilitar el debug del codigo
++  bool debug_pablo = false; // partitioner.currDepth == 0 || partitioner.currDepth == 1 ; // || partitioner.currDepth == 2;   // partitioner.currDepth == 0;
++  bool debug_slices =
++    false;   // partitioner.currDepth == 0 || partitioner.currDepth == 1 || partitioner.currDepth == 2;
++
++  std::string tabs = "";
++  if (debug_pablo){
++    for (int x = 0; x < partitioner.currDepth; x++)
++          tabs += "\t";
++
++    std::cout << tabs << " --------------------------------------- " << std::endl;
++  }
++    
++  // END: Pablo
+   CHECK(maxCostAllowed < 0, "Wrong value of maxCostAllowed!");
+ 
+   uint32_t compBegin;
+@@ -560,6 +576,52 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
+   const uint32_t uiLPelX  = tempCS->area.Y().lumaPos().x;
+   const uint32_t uiTPelY  = tempCS->area.Y().lumaPos().y;
+ 
++   // Pablo
++  // - En el siguiente codigo en caso de que se haya pasado un fichero con los parametros de cuantificacion
++  //   se obtendra el valor de cuantificaci�n correspondiente a su slice
++  // Se inicializa a 0 pero su valor sera sobreescrito
++  int the_qp_val = 0;
++
++  if (debug_pablo) {
++    std::cout << tabs << "uiLPelX<" << uiLPelX << "> uiLPelY<" << uiTPelY << ">" << std::endl;
++    std::cout << tabs << "width<" << tempCS->area.lwidth() << "> height<" << tempCS->area.lheight() << ">"
++              << std::endl;
++    std::cout << tabs + "Current Depth <" << partitioner.currDepth << ">" << std::endl;
++  }
++    
++
++  // Obtenemos el valor solo en caso de que se haya aportado un archivo
++  if (m_pcEncCfg->getWidthCUCount() != -1)
++  {
++    // Obtenemos la CU a la que pertenece el slice actual
++    int val_x = uiLPelX / static_cast<int>(128);
++    int val_y = uiTPelY / static_cast<int>(128);
++
++    // Obtenemos el indice del array para acceder el valor de QP correspondiente
++    int total_val = val_x + val_y * m_pcEncCfg->getWidthCUCount();
++    // Obtenemos el �ndice de la matriz que contiene el array de datos del frame
++    int the_poc   = slice.getPOC();
++    // Obtenemos el valor y lo asignamos
++    the_qp_val    = m_pcEncCfg->getQPMatrixValues()[the_poc][total_val];
++    if (debug_pablo)
++      std::cout << tabs << "Valor (the_qp_val) [" << the_poc << "," << total_val << "] <" << the_qp_val << ">"
++                << std::endl;
++
++    // TEMP: Cambiamos prevQP y curr CP para chorma y luma
++    /*bestCS->prevQP[ChannelType::CHROMA] = the_qp_val;
++    bestCS->currQP[ChannelType::CHROMA] = the_qp_val;
++    bestCS->prevQP[ChannelType::LUMA]   = the_qp_val;
++    bestCS->currQP[ChannelType::LUMA]   = the_qp_val;
++
++    tempCS->prevQP[ChannelType::CHROMA] = the_qp_val;
++    tempCS->currQP[ChannelType::CHROMA] = the_qp_val;
++    tempCS->prevQP[ChannelType::LUMA]   = the_qp_val;
++    tempCS->currQP[ChannelType::LUMA]   = the_qp_val;*/
++
++  }
++  // END: Pablo
++
++
+   const ModeType modeTypeParent  = partitioner.modeType;
+   const TreeType treeTypeParent  = partitioner.treeType;
+   const ChannelType chTypeParent = partitioner.chType;
+@@ -719,6 +781,109 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
+     }
+   }
+ 
++
++  // Pablo
++  // - Obtenemos el tipo de corte que se va a realizar y ajustamos los parametros en consecuencia para que se realice o
++  // no el corte
++
++  // Variable que almacena la cadena de caracteres con los cortes a realizar
++  std::string     values     = m_pcEncCfg->getSlicesValues();
++  // Variable que almacena el tipo de corte a realizar
++  EncTestModeType valorCorte = ETM_INVALID;
++
++  // Variable que almacena si se va a realizar algun tipo de corte
++  bool aplicarCorte        = !values.empty();
++  // Variable que almacena si el parametro recibido es un corte
++  bool isSplit             = true;
++  // Variable que almacena si el corte deseado se ha realizado
++  bool postSplit           = false;
++  // Variable que almacena si se va a seguir el criterio del codificador o no
++  bool criterioCodificador = false;
++
++
++
++  // Si existen cortes o quedan cortes por realizar analizamos el tipo de corte
++  if (!values.empty())
++  {
++    if (debug_slices)
++      std::cout << tabs + "- Se consume <" + values[0] + "> de <" + values + ">" << std::endl;
++    switch (values[0])
++    {
++    case 'q':
++      valorCorte = ETM_SPLIT_QT;
++      values.erase(0, 1);
++      if (debug_slices)
++        std::cout << tabs + " -- Corte Quad <" + values + "> " << std::endl;
++      break;
++    case 'b':
++      if (values[1] == 'h')
++      {
++        valorCorte = ETM_SPLIT_BT_H;
++        if (debug_slices)
++          std::cout << tabs + " -- Spli bi Horizontal <" + values + "> " << std::endl;
++      }
++      else if (values[1] == 'v')
++      {
++        valorCorte = ETM_SPLIT_BT_V;
++        if (debug_slices)
++          std::cout << tabs + " -- Split Bi Vertical <" + values + "> " << std::endl;
++      }
++      else
++      {
++        // Error
++        if (debug_slices)
++          std::cout << tabs + " -- Error en el valor <" + values + "> " << std::endl;
++      }
++      values.erase(0, 2);
++      break;
++    case 't':
++      if (values[1] == 'h')
++      {
++        valorCorte = ETM_SPLIT_TT_H;
++        if (debug_slices)
++          std::cout << tabs + " -- Split Tri Horizontal <" + values + "> " << std::endl;
++      }
++      else if (values[1] == 'v')
++      {
++        valorCorte = ETM_SPLIT_TT_V;
++        if (debug_slices)
++          std::cout << tabs + " -- Split Tri Vertical <" + values + "> " << std::endl;
++      }
++      else
++      {
++        // Error
++        if (debug_slices)
++          std::cout << tabs + " -- Error en el valor <" + values + "> " << std::endl;
++      }
++      values.erase(0, 2);
++      break;
++    case '0':
++      // Hacer el continue
++      values.erase(0, 1);
++      isSplit = false;
++      if (debug_slices)
++        std::cout << tabs + " -- Volvemos <" + values + "> " << std::endl;
++      break;
++    case 'x':
++      aplicarCorte        = false;
++      criterioCodificador = true;
++      values.erase(0, 1);
++      values.insert(0, "y");
++      break;
++    case 'y':
++      aplicarCorte = false;
++      break;
++    default:
++      // Error
++      std::cout << tabs + " -- Error en el valor <" + std::to_string(int(values[0])) + "," + values[0] + "> de <"
++                     + values + "> "
++                << std::endl;
++      break;
++    }
++    m_pcEncCfg->setSlicesValues(values);
++  }
++  // END: Pablo
++
+   double splitRdCostBest[NUM_PART_SPLIT];
+   std::fill(std::begin(splitRdCostBest), std::end(splitRdCostBest), MAX_DOUBLE);
+   if (tempCS->slice->getCheckLDC())
+@@ -750,6 +915,14 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
+       }
+     }
+ 
++        // Pablo
++    // - Si se ha indicado un archivo de configuracion de qp se sustituye el valor del codificador por el dado
++    if (m_pcEncCfg->getWidthCUCount() != -1)
++    {
++      currTestMode.qp = the_qp_val;
++    }
++    // END: Pablo
++
+ #if SHARP_LUMA_DELTA_QP || ENABLE_QPA_SUB_CTU
+     if (partitioner.currQgEnable() && (
+         (m_pcEncCfg->getBIM()) ||
+@@ -775,7 +948,53 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
+     }
+ #endif
+ 
+-    if( currTestMode.type == ETM_INTER_ME )
++      // Pablo
++    // - Saltamos cortes o los aplicamos segun la configuracion dada
++    bool otherSplit = false;
++    // En caso de que se vaya a aplicar un corte realizamos una serie de comprobaciones
++    if (aplicarCorte)
++    {
++      // Se realizan comprobaciones si se ha pasado un corte y todavia no se ha realizado
++      if (isSplit && !postSplit)
++      {
++        // Si es un corte
++        if (isModeSplit(currTestMode))
++        {
++          // En caso de que e corte actual coincida con el deseado activamos un bool para que se salte als proxiams
++          // comprobaciones
++          if (currTestMode.type == valorCorte)
++            postSplit = true;
++          else
++            otherSplit = true;   // en caso contrario saltamos el corte
++        }
++        else if (currTestMode.type == ETM_POST_DONT_SPLIT)
++        {   // Si no es un corte saltamos en caso de ser ETM_POST_DONT_SPLIT
++          otherSplit = true;
++        }
++      }
++      else
++      {   // En caso de que se vaya a aplicar un corte pero este ya se haya realizado
++        // Si es un corte os es de tipo ETM_POST_DONT_SPLIT lo saltamos
++        if (isModeSplit(currTestMode) || currTestMode.type == ETM_POST_DONT_SPLIT)
++          otherSplit = true;
++      }
++    }
++    if (debug_slices){
++      std::cout << tabs << "- 1:T 0:F isSplit <" << isSplit << "> otherSplit <"
++                << otherSplit << "> postSplit <" << postSplit << ">"
++                << std::endl;
++      std::cout << tabs << "- Split Enum Mode  <" << currTestMode.type << ">" << std::endl;
++    }
++      
++    // En caso de que se vaya a realizar un corte saltamos si el corte no es deseado
++    if (aplicarCorte && otherSplit)
++    {   // !isSplit &&
++      if (debug_slices)
++        std::cout << tabs + "- Saltamos corte" << std::endl;
++      continue;
++      // END: Pablo
++    }
++    else if( currTestMode.type == ETM_INTER_ME )
+     {
+       if( ( currTestMode.opts & ETO_IMV ) != 0 )
+       {
+@@ -976,9 +1195,17 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
+     {
+       THROW( "Don't know how to handle mode: type = " << currTestMode.type << ", options = " << currTestMode.opts );
+     }
+-  } while( m_modeCtrl->nextMode( *tempCS, partitioner ) );
+-
++  } while (m_modeCtrl->nextMode(*tempCS, partitioner, aplicarCorte));
+ 
++    // Pablo - cancelamos el criterio del codificador
++  // - En caso de que se siga el criterio del codificador para una seccion concreta cerramos al terminar de analizar
++  if (criterioCodificador)
++  {
++    values.erase(0, 1);
++    m_pcEncCfg->setSlicesValues(values);
++  }
++  // END: Pablo
++  
+   //////////////////////////////////////////////////////////////////////////
+   // Finishing CU
+   if( tempCS->cost == MAX_DOUBLE && bestCS->cost == MAX_DOUBLE )
+diff --git a/source/Lib/EncoderLib/EncModeCtrl.cpp b/source/Lib/EncoderLib/EncModeCtrl.cpp
+index 4ef95008c..33f6d4b23 100644
+--- a/source/Lib/EncoderLib/EncModeCtrl.cpp
++++ b/source/Lib/EncoderLib/EncModeCtrl.cpp
+@@ -85,12 +85,20 @@ void EncModeCtrl::xExtractFeatures( const EncTestMode encTestmode, CodingStructu
+   cs.features[ENC_FT_ENC_MODE_OPTS  ] = double( encTestmode.opts     );
+ }
+ 
+-bool EncModeCtrl::nextMode( const CodingStructure &cs, Partitioner &partitioner )
++bool EncModeCtrl::nextMode( const CodingStructure &cs, Partitioner &partitioner , bool skipTryMode)   // Pablo - Anadimos un bool para poder saltar el TryMode en caso de ser necesario
+ {
+   m_ComprCUCtxList.back().lastTestMode = m_ComprCUCtxList.back().testModes.back();
+ 
+   m_ComprCUCtxList.back().testModes.pop_back();
+ 
++  // Pablo
++  // - Anadimos un if por el cual saltamos el tryMode en caso de hacer un particionado espec�fico para evitar posibles
++  // errores
++  if (skipTryMode)
++    return !m_ComprCUCtxList.back().testModes.empty();
++  // END: Pablo
++
++
+   while( !m_ComprCUCtxList.back().testModes.empty() && !tryModeMaster( currTestMode(), cs, partitioner ) )
+   {
+     m_ComprCUCtxList.back().testModes.pop_back();
+@@ -1387,7 +1395,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
+   // ensure to skip unprobable modes
+   if( !tryModeMaster( m_ComprCUCtxList.back().testModes.back(), cs, partitioner ) )
+   {
+-    nextMode( cs, partitioner );
++    nextMode( cs, partitioner , false);   // Pablo - Nuevo parametro
+   }
+ 
+   m_ComprCUCtxList.back().lastTestMode = EncTestMode();
+diff --git a/source/Lib/EncoderLib/EncModeCtrl.h b/source/Lib/EncoderLib/EncModeCtrl.h
+index 9460e9ca4..0e5688a5a 100644
+--- a/source/Lib/EncoderLib/EncModeCtrl.h
++++ b/source/Lib/EncoderLib/EncModeCtrl.h
+@@ -305,7 +305,7 @@ public:
+ 
+   void         init                 ( EncCfg *pCfg, RateCtrl *pRateCtrl, RdCost *pRdCost );
+   bool         tryModeMaster        ( const EncTestMode& encTestmode, const CodingStructure &cs, Partitioner& partitioner );
+-  bool         nextMode             ( const CodingStructure &cs, Partitioner &partitioner );
++  bool         nextMode             ( const CodingStructure &cs, Partitioner &partitioner, bool skipTryMode);   // Pablo - Nuevo parametro
+   EncTestMode  currTestMode         () const;
+   EncTestMode  lastTestMode         () const;
+   void         setEarlySkipDetected ();

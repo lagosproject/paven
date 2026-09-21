@@ -142,7 +142,9 @@ lagosproject/paven/
 ├── configs/sequences/             # Standard JVET CTC video sequence metadata (.cfg)
 ├── tools/                         # Evaluation, preprocessing, and codec execution utilities
 │   ├── bitrate_analysis/          # Bitrate reduction and LaTeX table generation
-│   ├── codec_runners/             # Automated VTM / VVC SLURM batch job generators
+│   ├── codec_runners/             # Codec execution utilities & reference patches
+│   │   ├── vtm_paven/             # Official VTM 18.2 patch (399 lines) & 1-click build script
+│   │   └── generate_vtm_jobs.py   # Automated VTM / VVC SLURM batch job generators
 │   ├── dataset_preparation/       # KDE estimation, resizing, and dataset acquisition
 │   │   ├── matlab/                # Full MATLAB Gaussian fixation mask generators (LEDOV, HVEC)
 │   │   ├── resize_dataset_parallel.py # Multithreaded dataset resizer with resume logs
