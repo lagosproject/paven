@@ -195,8 +195,13 @@ lagosproject/paven/
 }
 ```
 
+> [!NOTE]
+> **Institutional Repository Reference (MEDAL / CTB-UPM):**  
+> The paper published in *Elsevier EAAI 2025* references the institutional development repository at [`https://medal.ctb.upm.es/internal/gitlab/adiaz/paven/`](https://medal.ctb.upm.es/internal/gitlab/adiaz/paven/) hosted by the Medical Data Analysis Laboratory (MEDAL) at the Center for Biomedical Technology (CTB), Universidad Politécnica de Madrid (UPM). This GitHub repository ([`lagosproject/paven`](https://github.com/lagosproject/paven)) is the official, publicly accessible standalone release containing the pip-installable Python package, Hugging Face model integration, CLI utilities, and reproducible benchmark suites.
+
 ---
 
 ## 🤝 Acknowledgments
 
-The spatio-temporal video saliency backbone of PAVEN is adapted and extended from the [ViNet](https://github.com/samyak0210/ViNet) architecture by Samyak Jain et al. Computational resources were provided by the **CeSViMa Supercomputing Center (Magerit)** at Universidad Politécnica de Madrid.
+The spatio-temporal video saliency backbone of PAVEN is adapted and extended from the [ViNet](https://github.com/samyak0210/ViNet) architecture by Samyak Jain et al. Computational resources were provided by the **CeSViMa Supercomputing Center (Magerit)** at Universidad Politécnica de Madrid. Research and development were conducted within the **Medical Data Analysis Laboratory (MEDAL)** at the **Center for Biomedical Technology (CTB)** and the **Grupo de Tratamiento de Imágenes (GTI)** at ETSI Informáticos, UPM.
+

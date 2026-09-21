@@ -43,3 +43,15 @@ If you use the **PAVEN** algorithm, code, pre-trained model weights, or dataset 
 
 ### APA Format
 > Fernández Lagos, P. (2025). *Codificación Perceptual de Vídeos en el Estándar VVC Usando Técnicas Basadas en el Aprendizaje Profundo* (Master's thesis, Universidad Politécnica de Madrid). Archivo Digital UPM: https://oa.upm.es/88254/
+
+---
+
+## 3. Institutional Development Repository Reference
+
+The Elsevier EAAI journal publication explicitly references the institutional development repository:
+- **Internal GitLab UPM:** [`https://medal.ctb.upm.es/internal/gitlab/adiaz/paven/`](https://medal.ctb.upm.es/internal/gitlab/adiaz/paven/)  
+  *Medical Data Analysis Laboratory (MEDAL), Center for Biomedical Technology (CTB), Universidad Politécnica de Madrid.*
+- **Public Standalone Open-Source Release:** [`https://github.com/lagosproject/paven`](https://github.com/lagosproject/paven)  
+  *Maintained by Pablo Fernández Lagos.*
+- **Pre-trained Weights (Hugging Face Hub):** [`https://huggingface.co/lagosproject/paven`](https://huggingface.co/lagosproject/paven)
+
